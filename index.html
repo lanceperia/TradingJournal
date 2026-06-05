@@ -89,6 +89,10 @@
       margin-top: 0.35rem;
     }
 
+    .brand-row {
+      display: contents;
+    }
+
     /* monthly stat chips in header */
     .header-stats {
       display: flex;
@@ -523,6 +527,8 @@
       .controls-right { justify-content: center; }
       .chart-wrap   { height: 140px; }
       canvas#pnl-chart { height: 140px !important; }
+      .brand-row    { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+      .btn-signout  { position: static; }
     }
 
     @keyframes fadeInUp {
@@ -594,8 +600,7 @@
     .btn-signout:hover { border-color: var(--red); color: var(--red); }
 
     @media (min-width: 641px) {
-      header { position: relative; }
-      .btn-signout { position: absolute; top: 0; right: 0; }
+      .btn-signout { position: fixed; top: 1rem; right: 1.5rem; z-index: 10; }
     }
   </style>
 </head>
@@ -622,11 +627,13 @@
 
   <!-- ── HEADER: monthly stats ── -->
   <header>
-    <div class="brand">
-      <h1>Perry's Journal</h1>
-      <p>Trading Performance Calendar</p>
+    <div class="brand-row">
+      <div class="brand">
+        <h1>Perry's Journal</h1>
+        <p>Trading Performance Calendar</p>
+      </div>
+      <button id="btn-signout" class="btn-signout" title="Sign out">Sign out</button>
     </div>
-    <button id="btn-signout" class="btn-signout" title="Sign out">Sign out</button>
     <div class="header-stats">
       <div class="stat">
         <div class="stat-label">Trading Days</div>
