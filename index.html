@@ -272,6 +272,11 @@
       max-width: 100%;
     }
 
+    .cell-trade-count {
+      font-size: 0.55rem; color: var(--text-dim);
+      margin-top: 0.15rem;
+    }
+
     .cell-streak {
       position: absolute; top: 4px; right: 6px;
       width: 6px; height: 6px; border-radius: 50%;
@@ -452,6 +457,47 @@
     }
     .btn-danger:hover { background: rgba(239,68,68,.1); border-color: var(--red); }
 
+    /* ── trade list in modal ── */
+    .trade-list { margin-bottom: 1.25rem; }
+
+    .trade-list-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.4rem;
+    }
+
+    .trade-list-pnl { font-size: 0.85rem; font-weight: 700; min-width: 80px; }
+    .trade-list-pnl.pos { color: var(--green); }
+    .trade-list-pnl.neg { color: var(--red); }
+    .trade-list-pnl.zero { color: var(--amber-dim); }
+
+    .trade-list-info {
+      flex: 1;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .trade-list-del {
+      background: none; border: none;
+      color: var(--muted); font-size: 0.85rem;
+      cursor: pointer; padding: 0.2rem 0.4rem;
+      border-radius: var(--radius);
+      transition: color .15s, background .15s;
+    }
+    .trade-list-del:hover { color: var(--red); background: rgba(239,68,68,.1); }
+
+    .trade-separator {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1rem 0;
+    }
+
     /* ── toast ── */
     .toast {
       position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -592,8 +638,10 @@
 <!-- ── TRADE MODAL ── -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <div class="modal-title" id="modal-title">Log Trade Day</div>
+    <div class="modal-title" id="modal-title">Log Trade</div>
     <div class="modal-date" id="modal-date-label"></div>
+    <div class="trade-list" id="trade-list"></div>
+    <hr class="trade-separator" id="trade-separator" style="display:none" />
     <div class="field">
       <label>Profit / Loss (USD)</label>
       <div class="pnl-input-wrap">
@@ -611,9 +659,9 @@
       <textarea id="inp-notes" placeholder="What worked? What didn't?"></textarea>
     </div>
     <div class="modal-actions">
-      <button class="btn-danger" id="btn-delete" style="display:none">Delete</button>
+      <button class="btn-danger" id="btn-delete" style="display:none">Delete All</button>
       <button class="btn-outline" id="btn-cancel">Cancel</button>
-      <button class="btn-primary" id="btn-save-entry">Save Entry</button>
+      <button class="btn-primary" id="btn-save-entry">Add Trade</button>
     </div>
   </div>
 </div>
@@ -656,10 +704,23 @@
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) data = JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // migrate old single-trade format to arrays
+        for (const key of Object.keys(parsed)) {
+          if (!Array.isArray(parsed[key])) {
+            parsed[key] = [parsed[key]];
+          }
+        }
+        data = parsed;
+      }
     } catch {}
     const cap = localStorage.getItem(CAPITAL_STORAGE_KEY);
     capital = cap ? Number(cap) : 0;
+  }
+
+  function dayPnl(trades) {
+    return trades.reduce((sum, t) => sum + Number(t.pnl), 0);
   }
 
   function save() {
@@ -687,6 +748,11 @@
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
+        for (const key of Object.keys(imported)) {
+          if (!Array.isArray(imported[key])) {
+            imported[key] = [imported[key]];
+          }
+        }
         data = Object.assign({}, data, imported);
         save();
         renderCalendar();
@@ -751,7 +817,7 @@
 
     for (let d = 1; d <= daysInMonth; d++) {
       const key     = dateKey(viewYear, viewMonth, d);
-      const entry   = data[key];
+      const trades  = data[key];
       const isToday = today.getFullYear() === viewYear &&
                       today.getMonth()    === viewMonth &&
                       today.getDate()     === d;
@@ -760,9 +826,11 @@
       cell.className = 'cal-cell';
       if (isToday) cell.classList.add('today');
 
-      if (entry && entry.pnl !== '' && entry.pnl !== null && entry.pnl !== undefined) {
-        const n = Number(entry.pnl);
-        cell.classList.add(n > 0 ? 'has-profit' : n < 0 ? 'has-loss' : 'has-zero');
+      const hasTrades = trades && trades.length > 0;
+
+      if (hasTrades) {
+        const total = dayPnl(trades);
+        cell.classList.add(total > 0 ? 'has-profit' : total < 0 ? 'has-loss' : 'has-zero');
       }
 
       const dayEl = document.createElement('div');
@@ -770,21 +838,30 @@
       dayEl.textContent = d;
       cell.appendChild(dayEl);
 
-      if (entry && entry.pnl !== '' && entry.pnl !== null && entry.pnl !== undefined) {
+      if (hasTrades) {
+        const total = dayPnl(trades);
         const pnlEl = document.createElement('div');
-        pnlEl.className   = `cell-pnl ${pnlClass(entry.pnl)}`;
-        pnlEl.textContent = fmtPnL(entry.pnl);
+        pnlEl.className   = `cell-pnl ${pnlClass(total)}`;
+        pnlEl.textContent = fmtPnL(total);
         cell.appendChild(pnlEl);
 
-        if (entry.instrument || entry.notes) {
-          const noteEl = document.createElement('div');
-          noteEl.className   = 'cell-note';
-          noteEl.textContent = entry.instrument || entry.notes;
-          cell.appendChild(noteEl);
+        if (trades.length === 1) {
+          const t = trades[0];
+          if (t.instrument || t.notes) {
+            const noteEl = document.createElement('div');
+            noteEl.className   = 'cell-note';
+            noteEl.textContent = t.instrument || t.notes;
+            cell.appendChild(noteEl);
+          }
+        } else {
+          const countEl = document.createElement('div');
+          countEl.className   = 'cell-trade-count';
+          countEl.textContent = `${trades.length} trades`;
+          cell.appendChild(countEl);
         }
 
         const dot = document.createElement('div');
-        dot.className = `cell-streak ${pnlClass(entry.pnl)}`;
+        dot.className = `cell-streak ${pnlClass(total)}`;
         cell.appendChild(dot);
       }
 
@@ -797,18 +874,18 @@
 
   // ── Stats ─────────────────────────────────────────────────────────
   function updateStats() {
-    // month-level (header)
-    const monthEntries = Object.entries(data).filter(([k]) => {
+    // month-level (header) — day-based
+    const monthDays = Object.entries(data).filter(([k]) => {
       const [y, m] = k.split('-').map(Number);
       return y === viewYear && m === viewMonth + 1;
-    }).filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
+    }).filter(([, trades]) => trades.length > 0);
 
-    const monthPnls  = monthEntries.map(([, v]) => Number(v.pnl));
-    const mTotal     = monthPnls.reduce((a, b) => a + b, 0);
-    const mWins      = monthPnls.filter(n => n > 0).length;
-    const mLosses    = monthPnls.filter(n => n < 0).length;
-    const mDays      = monthPnls.length;
-    const mPct       = (capital > 0 && mDays > 0) ? (mTotal / capital) * 100 : null;
+    const mDayPnls = monthDays.map(([, trades]) => dayPnl(trades));
+    const mTotal   = mDayPnls.reduce((a, b) => a + b, 0);
+    const mWins    = mDayPnls.filter(n => n > 0).length;
+    const mLosses  = mDayPnls.filter(n => n < 0).length;
+    const mDays    = mDayPnls.length;
+    const mPct     = (capital > 0 && mDays > 0) ? (mTotal / capital) * 100 : null;
 
     set('hdr-days',      mDays || '—',       'stat-value neutral');
     set('hdr-wins',      mWins || '—',        'stat-value pos');
@@ -816,15 +893,14 @@
     setVal('hdr-month-pnl', mDays > 0 ? fmtPnL(mTotal) : '—', `stat-value ${pnlClass(mTotal)}`);
     setVal('hdr-month-pct', fmtPct(mPct), `stat-value ${pnlClass(mPct)}`);
 
-    // all-time (summary strip)
-    const allEntries = Object.entries(data)
-      .filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
-    const allPnls    = allEntries.map(([, v]) => Number(v.pnl));
-    const aTotal     = allPnls.reduce((a, b) => a + b, 0);
-    const aWins      = allPnls.filter(n => n > 0).length;
-    const aTrades    = allPnls.length;
-    const aWR        = aTrades > 0 ? Math.round((aWins / aTrades) * 100) : null;
-    const aPct       = (capital > 0 && aTrades > 0) ? (aTotal / capital) * 100 : null;
+    // all-time (summary strip) — trade-based
+    const allTrades = Object.values(data).flat();
+    const allPnls   = allTrades.map(t => Number(t.pnl));
+    const aTotal    = allPnls.reduce((a, b) => a + b, 0);
+    const aWins     = allPnls.filter(n => n > 0).length;
+    const aTrades   = allPnls.length;
+    const aWR       = aTrades > 0 ? Math.round((aWins / aTrades) * 100) : null;
+    const aPct      = (capital > 0 && aTrades > 0) ? (aTotal / capital) * 100 : null;
 
     document.getElementById('sum-capital').textContent = capital > 0 ? fmtMoney(capital) : 'Set capital';
     document.getElementById('sum-capital').className   = `summary-item-value ${capital > 0 ? 'neutral' : ''}`;
@@ -852,12 +928,12 @@
 
   function getMonthlyData(year) {
     return MONTHS_SHORT.map((_, m) => {
-      const entries = Object.entries(data).filter(([k]) => {
+      const days = Object.entries(data).filter(([k]) => {
         const [y, mo] = k.split('-').map(Number);
         return y === year && mo === m + 1;
-      }).filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
-      return entries.length > 0
-        ? entries.reduce((sum, [, v]) => sum + Number(v.pnl), 0)
+      }).filter(([, trades]) => trades.length > 0);
+      return days.length > 0
+        ? days.reduce((sum, [, trades]) => sum + dayPnl(trades), 0)
         : null;
     });
   }
@@ -1029,22 +1105,60 @@
   // ── Trade Modal ───────────────────────────────────────────────────
   function openModal(key) {
     editingDate = key;
-    const entry     = data[key] || {};
+    const trades    = data[key] || [];
     const [y, m, d] = key.split('-').map(Number);
     const dateStr   = new Date(y, m - 1, d).toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    document.getElementById('modal-title').textContent      = entry.pnl !== undefined ? 'Edit Trade Day' : 'Log Trade Day';
+    document.getElementById('modal-title').textContent      = trades.length > 0 ? 'Trades' : 'Log Trade';
     document.getElementById('modal-date-label').textContent = dateStr;
-    document.getElementById('inp-pnl').value                = entry.pnl ?? '';
-    document.getElementById('inp-instrument').value         = entry.instrument ?? 'BTCUSD';
-    document.getElementById('inp-notes').value              = entry.notes ?? '';
-    document.getElementById('btn-delete').style.display     = entry.pnl !== undefined ? '' : 'none';
+    document.getElementById('inp-pnl').value                = '';
+    document.getElementById('inp-instrument').value         = 'BTCUSD';
+    document.getElementById('inp-notes').value              = '';
+    document.getElementById('btn-delete').style.display     = trades.length > 0 ? '' : 'none';
 
+    renderTradeList();
     updatePnLPreview();
     document.getElementById('modal-overlay').classList.add('open');
     document.getElementById('inp-pnl').focus();
+  }
+
+  function renderTradeList() {
+    const trades = data[editingDate] || [];
+    const list   = document.getElementById('trade-list');
+    const sep    = document.getElementById('trade-separator');
+    list.innerHTML = '';
+
+    if (trades.length === 0) {
+      sep.style.display = 'none';
+      return;
+    }
+
+    sep.style.display = '';
+    trades.forEach((t, i) => {
+      const item = document.createElement('div');
+      item.className = 'trade-list-item';
+
+      const pnlEl = document.createElement('span');
+      pnlEl.className   = `trade-list-pnl ${pnlClass(t.pnl)}`;
+      pnlEl.textContent = fmtPnL(t.pnl);
+
+      const info = document.createElement('span');
+      info.className   = 'trade-list-info';
+      info.textContent = t.instrument || t.notes || '';
+
+      const del = document.createElement('button');
+      del.className   = 'trade-list-del';
+      del.textContent = '×';
+      del.title       = 'Remove trade';
+      del.addEventListener('click', () => deleteTrade(i));
+
+      item.appendChild(pnlEl);
+      item.appendChild(info);
+      item.appendChild(del);
+      list.appendChild(item);
+    });
   }
 
   function closeModal() {
@@ -1063,16 +1177,40 @@
   function saveEntry() {
     const pnl = document.getElementById('inp-pnl').value;
     if (pnl === '') { toast('Enter a PnL value first'); return; }
-    data[editingDate] = {
+    if (!data[editingDate]) data[editingDate] = [];
+    data[editingDate].push({
       pnl:        Number(pnl),
       instrument: document.getElementById('inp-instrument').value.trim(),
       notes:      document.getElementById('inp-notes').value.trim(),
-    };
+    });
     save();
     renderCalendar();
     renderChart();
-    closeModal();
-    toast('Entry saved');
+
+    // reset form for next trade but keep modal open
+    document.getElementById('inp-pnl').value       = '';
+    document.getElementById('inp-instrument').value = 'BTCUSD';
+    document.getElementById('inp-notes').value      = '';
+    document.getElementById('pnl-preview').textContent = '';
+    document.getElementById('btn-delete').style.display = '';
+    document.getElementById('modal-title').textContent  = 'Trades';
+    renderTradeList();
+    document.getElementById('inp-pnl').focus();
+    toast('Trade added');
+  }
+
+  function deleteTrade(index) {
+    if (!editingDate || !data[editingDate]) return;
+    data[editingDate].splice(index, 1);
+    if (data[editingDate].length === 0) delete data[editingDate];
+    save();
+    renderCalendar();
+    renderChart();
+    renderTradeList();
+    const trades = data[editingDate] || [];
+    document.getElementById('btn-delete').style.display    = trades.length > 0 ? '' : 'none';
+    document.getElementById('modal-title').textContent     = trades.length > 0 ? 'Trades' : 'Log Trade';
+    toast('Trade removed');
   }
 
   function deleteEntry() {
@@ -1082,7 +1220,7 @@
     renderCalendar();
     renderChart();
     closeModal();
-    toast('Entry deleted');
+    toast('All trades deleted');
   }
 
   // ── Capital Modal ─────────────────────────────────────────────────
