@@ -287,7 +287,7 @@
     /* ── summary strip (all-time) ── */
     .summary-strip {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 1px;
       background: var(--border);
       border: 1px solid var(--border);
@@ -592,6 +592,11 @@
       transition: border-color .15s, color .15s;
     }
     .btn-signout:hover { border-color: var(--red); color: var(--red); }
+
+    @media (min-width: 641px) {
+      header { position: relative; }
+      .btn-signout { position: absolute; top: 0; right: 0; }
+    }
   </style>
 </head>
 <body>
@@ -621,7 +626,6 @@
       <h1>Perry's Journal</h1>
       <p>Trading Performance Calendar</p>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
     <button id="btn-signout" class="btn-signout" title="Sign out">Sign out</button>
     <div class="header-stats">
       <div class="stat">
@@ -644,7 +648,6 @@
         <div class="stat-label">Month Return</div>
         <div class="stat-value" id="hdr-month-pct">—</div>
       </div>
-    </div>
     </div>
   </header>
 
@@ -684,6 +687,10 @@
         <div class="summary-item-value neutral" id="sum-capital">—</div>
         <span class="edit-icon">✎</span>
       </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Current Balance</div>
+      <div class="summary-item-value" id="sum-balance">—</div>
     </div>
     <div class="summary-item">
       <div class="summary-item-label">Total PnL</div>
@@ -1025,6 +1032,10 @@
 
     document.getElementById('sum-capital').textContent = capital > 0 ? fmtMoney(capital) : 'Set capital';
     document.getElementById('sum-capital').className   = `summary-item-value ${capital > 0 ? 'neutral' : ''}`;
+
+    const balance = capital > 0 ? capital + aTotal : null;
+    document.getElementById('sum-balance').textContent = balance !== null ? fmtMoney(balance) : '—';
+    document.getElementById('sum-balance').className   = `summary-item-value ${balance === null ? 'neutral' : balance < capital ? 'neg' : 'pos'}`;
 
     setVal('sum-total-pnl',  aTrades > 0 ? fmtPnL(aTotal)  : '—',   `summary-item-value ${pnlClass(aTotal)}`);
     setVal('sum-total-pct',  fmtPct(aPct),                            `summary-item-value ${pnlClass(aPct)}`);
