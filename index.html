@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0a0a0b;
+      --surface:   #111113;
+      --surface2:  #18181b;
+      --border:    #2a2a30;
+      --amber:     #f59e0b;
+      --amber-dim: #92600a;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --muted:     #52525b;
+      --text:      #e4e4e7;
+      --text-dim:  #a1a1aa;
+      --radius:    6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(245,158,11,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,.15) 2px, rgba(0,0,0,.15) 4px
+      );
+      pointer-events: none; z-index: 0;
+    }
+
+    #app {
+      position: relative; z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── header ── */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.25rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--amber);
+      line-height: 1;
+    }
+
+    .brand p {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    /* monthly stat chips in header */
+    .header-stats {
+      display: flex;
+      gap: 1.75rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .stat { text-align: right; }
+
+    .stat-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .stat-value.pos     { color: var(--green); }
+    .stat-value.neg     { color: var(--red); }
+    .stat-value.neutral { color: var(--text); }
+    .stat-value.zero    { color: var(--amber-dim); }
+
+    /* ── controls ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .month-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .btn-icon {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 34px; height: 34px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-icon:hover { border-color: var(--amber); color: var(--amber); }
+
+    .btn-primary {
+      background: var(--amber);
+      border: none;
+      color: #000;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .85; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-outline:hover { border-color: var(--amber); color: var(--amber); }
+
+    .controls-right { display: flex; gap: 0.5rem; }
+
+    .btn-today {
+      background: transparent;
+      border: 1px solid var(--amber-dim);
+      color: var(--amber);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 0.3rem 0.65rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      margin-left: 0.25rem;
+    }
+    .btn-today:hover { background: rgba(245,158,11,.1); border-color: var(--amber); }
+
+    /* ── calendar ── */
+    .calendar {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .cal-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cal-dow {
+      padding: 0.65rem 0;
+      text-align: center;
+      font-size: 0.6rem;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .cal-dow.weekend { color: var(--amber-dim); }
+
+    .cal-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+
+    .cal-cell {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      min-height: 90px;
+      padding: 0.5rem 0.6rem 0.4rem;
+      cursor: pointer;
+      position: relative;
+      transition: background .12s;
+      display: flex; flex-direction: column;
+    }
+    .cal-cell:nth-child(7n) { border-right: none; }
+    .cal-cell:hover         { background: var(--surface2); }
+    .cal-cell.empty         { cursor: default; background: rgba(0,0,0,.2); }
+
+    .cal-cell.today .cell-day {
+      background: var(--amber); color: #000; font-weight: 700;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .cal-cell.has-profit      { background: rgba(34,197,94,.06); }
+    .cal-cell.has-profit:hover{ background: rgba(34,197,94,.1); }
+    .cal-cell.has-loss        { background: rgba(239,68,68,.06); }
+    .cal-cell.has-loss:hover  { background: rgba(239,68,68,.1); }
+    .cal-cell.has-zero        { background: rgba(245,158,11,.04); }
+    .cal-cell.has-zero:hover  { background: rgba(245,158,11,.08); }
+
+    .cell-day {
+      font-size: 0.7rem; color: var(--text-dim);
+      line-height: 1; margin-bottom: 0.4rem;
+      align-self: flex-start;
+    }
+
+    .cell-pnl {
+      font-size: 0.85rem; font-weight: 700;
+      flex: 1; display: flex; align-items: flex-end;
+    }
+    .cell-pnl.pos  { color: var(--green); }
+    .cell-pnl.neg  { color: var(--red); }
+    .cell-pnl.zero { color: var(--amber-dim); }
+
+    .cell-note {
+      font-size: 0.6rem; color: var(--muted);
+      margin-top: 0.2rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .cell-streak {
+      position: absolute; top: 4px; right: 6px;
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .cell-streak.pos { background: var(--green); opacity: .7; }
+    .cell-streak.neg { background: var(--red);   opacity: .7; }
+
+    /* ── summary strip (all-time) ── */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 1.25rem;
+    }
+
+    .summary-item { background: var(--surface); padding: 0.9rem 1.1rem; }
+
+    .summary-item-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.3rem;
+    }
+
+    .summary-item-value { font-size: 1rem; font-weight: 700; }
+    .summary-item-value.pos     { color: var(--green); }
+    .summary-item-value.neg     { color: var(--red); }
+    .summary-item-value.neutral { color: var(--text); }
+    .summary-item-value.zero    { color: var(--amber-dim); }
+
+    /* capital chip — clickable */
+    .capital-chip {
+      display: flex; align-items: center; gap: 0.3rem;
+      cursor: pointer;
+      transition: color .15s;
+    }
+    .capital-chip:hover .summary-item-value { color: var(--amber); }
+    .capital-chip .edit-icon {
+      font-size: 0.65rem; color: var(--muted);
+      transition: color .15s;
+    }
+    .capital-chip:hover .edit-icon { color: var(--amber); }
+
+    /* ── chart section ── */
+    .chart-section {
+      margin-top: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 1.25rem 1.5rem 1rem;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .chart-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem; font-weight: 700;
+      color: var(--text);
+    }
+
+    .chart-year-nav {
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+
+    .chart-year-label {
+      font-size: 0.75rem; font-weight: 600;
+      color: var(--text-dim);
+      min-width: 44px; text-align: center;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 180px;
+    }
+
+    canvas#pnl-chart {
+      width: 100% !important;
+      height: 180px !important;
+    }
+
+    /* ── modal (shared) ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: min(480px, calc(100vw - 2rem));
+      padding: 1.75rem;
+      transform: translateY(12px);
+      transition: transform .2s;
+      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem; font-weight: 700;
+      color: var(--amber); margin-bottom: 0.25rem;
+    }
+
+    .modal-date {
+      font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.5rem;
+    }
+
+    .field { margin-bottom: 1.1rem; }
+
+    .field label {
+      display: block;
+      font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.45rem;
+    }
+
+    .field input, .field textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--amber); }
+    .field textarea { resize: vertical; min-height: 72px; }
+
+    .pnl-input-wrap { position: relative; }
+    .pnl-input-wrap .currency {
+      position: absolute; left: 0.75rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted); font-size: 0.85rem;
+    }
+    .pnl-input-wrap input { padding-left: 1.75rem; }
+
+    .pnl-preview {
+      margin-top: 0.5rem; font-size: 1.2rem; font-weight: 700;
+      text-align: right;
+    }
+
+    .modal-actions {
+      display: flex; gap: 0.6rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(239,68,68,.4);
+      color: var(--red);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      margin-right: auto;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,.1); border-color: var(--red); }
+
+    /* ── toast ── */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--amber);
+      padding: 0.7rem 1.1rem;
+      border-radius: var(--radius);
+      font-size: 0.75rem; color: var(--text);
+      z-index: 200;
+      transform: translateY(80px); opacity: 0;
+      transition: transform .25s, opacity .25s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 640px) {
+      .cal-cell     { min-height: 60px; padding: 0.3rem 0.35rem; }
+      .cell-pnl     { font-size: 0.7rem; }
+      .summary-strip{ grid-template-columns: repeat(2, 1fr); }
+      .header-stats { gap: 1rem; }
+      .controls     { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+      .chart-wrap   { height: 140px; }
+      canvas#pnl-chart { height: 140px !important; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    #app { animation: fadeInUp .35s ease-out; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER: monthly stats ── -->
+  <header>
+    <div class="brand">
+      <h1>Trading Journal</h1>
+      <p>Trading Performance Calendar</p>
+    </div>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-label">Trading Days</div>
+        <div class="stat-value neutral" id="hdr-days">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Win Days</div>
+        <div class="stat-value pos" id="hdr-wins">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Loss Days</div>
+        <div class="stat-value neg" id="hdr-losses">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Month PnL</div>
+        <div class="stat-value" id="hdr-month-pnl">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Month Return</div>
+        <div class="stat-value" id="hdr-month-pct">—</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── CONTROLS ── -->
+  <div class="controls">
+    <div class="month-nav">
+      <button class="btn-icon" id="prev-month">&#8249;</button>
+      <span class="month-label" id="month-label"></span>
+      <button class="btn-icon" id="next-month">&#8250;</button>
+      <button class="btn-today" id="btn-today" style="display:none">Today</button>
+    </div>
+    <div class="controls-right">
+      <button class="btn-outline" id="btn-load">&#8599; Load JSON</button>
+      <button class="btn-outline" id="btn-save">&#8595; Save JSON</button>
+    </div>
+  </div>
+
+  <!-- ── CALENDAR ── -->
+  <div class="calendar">
+    <div class="cal-header">
+      <div class="cal-dow">Sun</div>
+      <div class="cal-dow">Mon</div>
+      <div class="cal-dow">Tue</div>
+      <div class="cal-dow">Wed</div>
+      <div class="cal-dow">Thu</div>
+      <div class="cal-dow">Fri</div>
+      <div class="cal-dow weekend">Sat</div>
+    </div>
+    <div class="cal-body" id="cal-body"></div>
+  </div>
+
+  <!-- ── SUMMARY STRIP: all-time stats ── -->
+  <div class="summary-strip">
+    <div class="summary-item">
+      <div class="summary-item-label">Capital</div>
+      <div class="capital-chip" id="capital-chip" title="Click to edit capital">
+        <div class="summary-item-value neutral" id="sum-capital">—</div>
+        <span class="edit-icon">✎</span>
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Total PnL</div>
+      <div class="summary-item-value" id="sum-total-pnl">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Total Return</div>
+      <div class="summary-item-value" id="sum-total-pct">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Win Rate</div>
+      <div class="summary-item-value" id="sum-winrate">—</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-item-label">Total Trades</div>
+      <div class="summary-item-value neutral" id="sum-trades">0</div>
+    </div>
+  </div>
+
+  <!-- ── CHART ── -->
+  <div class="chart-section">
+    <div class="chart-header">
+      <div class="chart-title">Monthly Return</div>
+      <div class="chart-year-nav">
+        <button class="btn-icon" id="chart-prev-year">&#8249;</button>
+        <span class="chart-year-label" id="chart-year-label"></span>
+        <button class="btn-icon" id="chart-next-year">&#8250;</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="pnl-chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TRADE MODAL ── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Log Trade Day</div>
+    <div class="modal-date" id="modal-date-label"></div>
+    <div class="field">
+      <label>Profit / Loss (USD)</label>
+      <div class="pnl-input-wrap">
+        <span class="currency">$</span>
+        <input type="number" id="inp-pnl" placeholder="0.00" step="0.01" />
+      </div>
+      <div class="pnl-preview" id="pnl-preview"></div>
+    </div>
+    <div class="field">
+      <label>Instrument / Setup</label>
+      <input type="text" id="inp-instrument" placeholder="e.g. NQ, ES, TSLA calls…" />
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="inp-notes" placeholder="What worked? What didn't?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="btn-delete" style="display:none">Delete</button>
+      <button class="btn-outline" id="btn-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-save-entry">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CAPITAL MODAL ── -->
+<div class="modal-overlay" id="capital-modal-overlay">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-title">Set Capital</div>
+    <div class="modal-date">Your starting / current account size</div>
+    <div class="field">
+      <label>Amount (USD)</label>
+      <div class="pnl-input-wrap">
+        <span class="currency">$</span>
+        <input type="number" id="inp-capital-modal" placeholder="10000" min="0" step="100" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" id="btn-capital-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-capital-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="file-input" accept=".json" style="display:none" />
+
+<script>
+  // ── State ────────────────────────────────────────────────────────
+  const STORAGE_KEY         = 'pnl_journal_v1';
+  const CAPITAL_STORAGE_KEY = 'pnl_capital_v1';
+
+  let data        = {};
+  let capital     = 0;
+  let viewYear    = new Date().getFullYear();
+  let viewMonth   = new Date().getMonth();
+  let chartYear   = new Date().getFullYear();
+  let editingDate = null;
+
+  // ── Persistence ──────────────────────────────────────────────────
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) data = JSON.parse(raw);
+    } catch {}
+    const cap = localStorage.getItem(CAPITAL_STORAGE_KEY);
+    capital = cap ? Number(cap) : 0;
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function saveCapital() {
+    localStorage.setItem(CAPITAL_STORAGE_KEY, String(capital));
+  }
+
+  // ── Export / Import ───────────────────────────────────────────────
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `pnl_journal_${viewYear}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Saved to pnl_journal.json');
+  }
+
+  function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        data = Object.assign({}, data, imported);
+        save();
+        renderCalendar();
+        renderChart();
+        toast('Journal loaded');
+      } catch {
+        toast('Invalid JSON file');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Formatting ────────────────────────────────────────────────────
+  function fmtPnL(val) {
+    if (val === null || val === undefined || val === '') return '—';
+    const n = Number(val);
+    return (n >= 0 ? '+' : '') + '$' + Math.abs(n).toLocaleString('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+  }
+
+  function fmtMoney(val) {
+    if (!val) return '—';
+    return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function fmtPct(val) {
+    if (val === null || val === undefined) return '—';
+    return (val >= 0 ? '+' : '') + Number(val).toFixed(2) + '%';
+  }
+
+  function pnlClass(val) {
+    if (val === null || val === undefined) return 'neutral';
+    const n = Number(val);
+    return n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero';
+  }
+
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  const MONTHS     = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun',
+                        'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // ── Calendar render ───────────────────────────────────────────────
+  function renderCalendar() {
+    const body        = document.getElementById('cal-body');
+    const today       = new Date();
+    const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    body.innerHTML = '';
+    document.getElementById('month-label').textContent = `${MONTHS[viewMonth]} ${viewYear}`;
+
+    for (let i = 0; i < firstDay; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell empty';
+      body.appendChild(cell);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key     = dateKey(viewYear, viewMonth, d);
+      const entry   = data[key];
+      const isToday = today.getFullYear() === viewYear &&
+                      today.getMonth()    === viewMonth &&
+                      today.getDate()     === d;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      if (isToday) cell.classList.add('today');
+
+      if (entry && entry.pnl !== '' && entry.pnl !== null && entry.pnl !== undefined) {
+        const n = Number(entry.pnl);
+        cell.classList.add(n > 0 ? 'has-profit' : n < 0 ? 'has-loss' : 'has-zero');
+      }
+
+      const dayEl = document.createElement('div');
+      dayEl.className   = 'cell-day';
+      dayEl.textContent = d;
+      cell.appendChild(dayEl);
+
+      if (entry && entry.pnl !== '' && entry.pnl !== null && entry.pnl !== undefined) {
+        const pnlEl = document.createElement('div');
+        pnlEl.className   = `cell-pnl ${pnlClass(entry.pnl)}`;
+        pnlEl.textContent = fmtPnL(entry.pnl);
+        cell.appendChild(pnlEl);
+
+        if (entry.instrument || entry.notes) {
+          const noteEl = document.createElement('div');
+          noteEl.className   = 'cell-note';
+          noteEl.textContent = entry.instrument || entry.notes;
+          cell.appendChild(noteEl);
+        }
+
+        const dot = document.createElement('div');
+        dot.className = `cell-streak ${pnlClass(entry.pnl)}`;
+        cell.appendChild(dot);
+      }
+
+      cell.addEventListener('click', () => openModal(key));
+      body.appendChild(cell);
+    }
+
+    updateStats();
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────
+  function updateStats() {
+    // month-level (header)
+    const monthEntries = Object.entries(data).filter(([k]) => {
+      const [y, m] = k.split('-').map(Number);
+      return y === viewYear && m === viewMonth + 1;
+    }).filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
+
+    const monthPnls  = monthEntries.map(([, v]) => Number(v.pnl));
+    const mTotal     = monthPnls.reduce((a, b) => a + b, 0);
+    const mWins      = monthPnls.filter(n => n > 0).length;
+    const mLosses    = monthPnls.filter(n => n < 0).length;
+    const mDays      = monthPnls.length;
+    const mPct       = (capital > 0 && mDays > 0) ? (mTotal / capital) * 100 : null;
+
+    set('hdr-days',      mDays || '—',       'stat-value neutral');
+    set('hdr-wins',      mWins || '—',        'stat-value pos');
+    set('hdr-losses',    mLosses || '—',      'stat-value neg');
+    setVal('hdr-month-pnl', mDays > 0 ? fmtPnL(mTotal) : '—', `stat-value ${pnlClass(mTotal)}`);
+    setVal('hdr-month-pct', fmtPct(mPct), `stat-value ${pnlClass(mPct)}`);
+
+    // all-time (summary strip)
+    const allEntries = Object.entries(data)
+      .filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
+    const allPnls    = allEntries.map(([, v]) => Number(v.pnl));
+    const aTotal     = allPnls.reduce((a, b) => a + b, 0);
+    const aWins      = allPnls.filter(n => n > 0).length;
+    const aTrades    = allPnls.length;
+    const aWR        = aTrades > 0 ? Math.round((aWins / aTrades) * 100) : null;
+    const aPct       = (capital > 0 && aTrades > 0) ? (aTotal / capital) * 100 : null;
+
+    document.getElementById('sum-capital').textContent = capital > 0 ? fmtMoney(capital) : 'Set capital';
+    document.getElementById('sum-capital').className   = `summary-item-value ${capital > 0 ? 'neutral' : ''}`;
+
+    setVal('sum-total-pnl',  aTrades > 0 ? fmtPnL(aTotal)  : '—',   `summary-item-value ${pnlClass(aTotal)}`);
+    setVal('sum-total-pct',  fmtPct(aPct),                            `summary-item-value ${pnlClass(aPct)}`);
+    setVal('sum-winrate',    aWR !== null ? `${aWR}%` : '—',          `summary-item-value ${pnlClass(aWR - 50)}`);
+    document.getElementById('sum-trades').textContent = aTrades;
+  }
+
+  function set(id, val, cls) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    if (cls) el.className = cls;
+  }
+
+  function setVal(id, val, cls) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.className   = cls;
+  }
+
+  // ── Chart ─────────────────────────────────────────────────────────
+  let chartInstance = null;
+
+  function getMonthlyData(year) {
+    return MONTHS_SHORT.map((_, m) => {
+      const entries = Object.entries(data).filter(([k]) => {
+        const [y, mo] = k.split('-').map(Number);
+        return y === year && mo === m + 1;
+      }).filter(([, v]) => v.pnl !== '' && v.pnl !== null && v.pnl !== undefined);
+      return entries.length > 0
+        ? entries.reduce((sum, [, v]) => sum + Number(v.pnl), 0)
+        : null;
+    });
+  }
+
+  function renderChart() {
+    document.getElementById('chart-year-label').textContent = chartYear;
+
+    const canvas  = document.getElementById('pnl-chart');
+    const ctx     = canvas.getContext('2d');
+    const values  = getMonthlyData(chartYear);
+
+    // DPR-aware sizing
+    const wrap  = canvas.parentElement;
+    const dpr   = window.devicePixelRatio || 1;
+    const W     = wrap.clientWidth;
+    const H     = 180;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+
+    // clear
+    ctx.clearRect(0, 0, W, H);
+
+    // layout
+    const PAD_L = 62, PAD_R = 16, PAD_T = 16, PAD_B = 28;
+    const plotW = W - PAD_L - PAD_R;
+    const plotH = H - PAD_T - PAD_B;
+
+    const nonNull    = values.filter(v => v !== null);
+    const hasData    = nonNull.length > 0;
+    const dataMax    = hasData ? Math.max(...nonNull.map(Math.abs)) : 1000;
+    const yMax       = dataMax * 1.3 || 1000;
+
+    function toX(i) { return PAD_L + (i / 11) * plotW; }
+    function toY(v) { return PAD_T + plotH / 2 - (v / yMax) * (plotH / 2); }
+
+    const mid = toY(0);
+
+    // ── grid lines ──
+    ctx.strokeStyle = 'rgba(42,42,48,.8)';
+    ctx.lineWidth   = 1;
+    [-1, -0.5, 0, 0.5, 1].forEach(frac => {
+      const y = PAD_T + plotH / 2 - frac * (plotH / 2);
+      ctx.beginPath();
+      ctx.moveTo(PAD_L, y);
+      ctx.lineTo(W - PAD_R, y);
+      ctx.stroke();
+    });
+
+    // ── y-axis labels ──
+    ctx.fillStyle  = 'rgba(82,82,91,.9)';
+    ctx.font       = `500 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign  = 'right';
+    [1, 0.5, 0, -0.5, -1].forEach(frac => {
+      const y   = PAD_T + plotH / 2 - frac * (plotH / 2);
+      const val = frac * yMax;
+      const lbl = val === 0 ? '$0'
+        : (val > 0 ? '+$' : '-$') + Math.abs(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+      ctx.fillText(lbl, PAD_L - 6, y + 3);
+    });
+
+    // ── zero line ──
+    ctx.strokeStyle = 'rgba(82,82,91,.5)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(PAD_L, mid);
+    ctx.lineTo(W - PAD_R, mid);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (!hasData) {
+      ctx.fillStyle = 'rgba(82,82,91,.5)';
+      ctx.font      = `400 11px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('No data for this year', W / 2, H / 2);
+      // x-axis labels still
+      drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW);
+      return;
+    }
+
+    // ── gradient fill under line ──
+    const points = values.map((v, i) => ({ x: toX(i), y: v !== null ? toY(v) : null }));
+
+    // build continuous segments
+    const segments = [];
+    let seg = null;
+    points.forEach((p, i) => {
+      if (p.y !== null) {
+        if (!seg) seg = [];
+        seg.push({ ...p, i });
+      } else {
+        if (seg) { segments.push(seg); seg = null; }
+      }
+    });
+    if (seg) segments.push(seg);
+
+    segments.forEach(seg => {
+      if (seg.length < 2) return;
+      const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + plotH);
+      grad.addColorStop(0, 'rgba(245,158,11,.18)');
+      grad.addColorStop(0.5, 'rgba(245,158,11,.05)');
+      grad.addColorStop(1, 'rgba(245,158,11,.0)');
+
+      ctx.beginPath();
+      ctx.moveTo(seg[0].x, mid);
+      seg.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(seg[seg.length - 1].x, mid);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+    });
+
+    // ── line ──
+    segments.forEach(seg => {
+      if (seg.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(seg[0].x, seg[0].y);
+      for (let k = 1; k < seg.length; k++) {
+        // smooth curve
+        const prev = seg[k - 1], curr = seg[k];
+        const cpx  = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+      }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+    });
+
+    // ── dots + value labels ──
+    points.forEach((p, i) => {
+      if (p.y === null) return;
+      const v   = values[i];
+      const col = v > 0 ? '#22c55e' : v < 0 ? '#ef4444' : '#f59e0b';
+      const lbl = (v >= 0 ? '+$' : '-$') + Math.abs(v).toLocaleString('en-US', {
+        minimumFractionDigits: 0, maximumFractionDigits: 0,
+      });
+
+      // dot
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.strokeStyle = '#0a0a0b';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+
+      // value label
+      ctx.fillStyle  = col;
+      ctx.font       = `600 13px 'JetBrains Mono', monospace`;
+      ctx.textAlign  = 'center';
+      const labelY   = v >= 0 ? p.y - 9 : p.y + 17;
+      ctx.fillText(lbl, p.x, labelY);
+    });
+
+    drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW);
+  }
+
+  function drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW) {
+    ctx.fillStyle = 'rgba(82,82,91,.9)';
+    ctx.font      = `400 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    MONTHS_SHORT.forEach((m, i) => {
+      const x = PAD_L + (i / 11) * plotW;
+      ctx.fillText(m, x, H - PAD_B + 14);
+    });
+  }
+
+  // ── Trade Modal ───────────────────────────────────────────────────
+  function openModal(key) {
+    editingDate = key;
+    const entry     = data[key] || {};
+    const [y, m, d] = key.split('-').map(Number);
+    const dateStr   = new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    document.getElementById('modal-title').textContent      = entry.pnl !== undefined ? 'Edit Trade Day' : 'Log Trade Day';
+    document.getElementById('modal-date-label').textContent = dateStr;
+    document.getElementById('inp-pnl').value                = entry.pnl ?? '';
+    document.getElementById('inp-instrument').value         = entry.instrument ?? 'BTCUSD';
+    document.getElementById('inp-notes').value              = entry.notes ?? '';
+    document.getElementById('btn-delete').style.display     = entry.pnl !== undefined ? '' : 'none';
+
+    updatePnLPreview();
+    document.getElementById('modal-overlay').classList.add('open');
+    document.getElementById('inp-pnl').focus();
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    editingDate = null;
+  }
+
+  function updatePnLPreview() {
+    const val = document.getElementById('inp-pnl').value;
+    const el  = document.getElementById('pnl-preview');
+    if (val === '' || isNaN(val)) { el.textContent = ''; return; }
+    el.textContent = fmtPnL(Number(val));
+    el.className   = `pnl-preview ${pnlClass(Number(val))}`;
+  }
+
+  function saveEntry() {
+    const pnl = document.getElementById('inp-pnl').value;
+    if (pnl === '') { toast('Enter a PnL value first'); return; }
+    data[editingDate] = {
+      pnl:        Number(pnl),
+      instrument: document.getElementById('inp-instrument').value.trim(),
+      notes:      document.getElementById('inp-notes').value.trim(),
+    };
+    save();
+    renderCalendar();
+    renderChart();
+    closeModal();
+    toast('Entry saved');
+  }
+
+  function deleteEntry() {
+    if (!editingDate || !data[editingDate]) return;
+    delete data[editingDate];
+    save();
+    renderCalendar();
+    renderChart();
+    closeModal();
+    toast('Entry deleted');
+  }
+
+  // ── Capital Modal ─────────────────────────────────────────────────
+  function openCapitalModal() {
+    document.getElementById('inp-capital-modal').value = capital || '';
+    document.getElementById('capital-modal-overlay').classList.add('open');
+    document.getElementById('inp-capital-modal').focus();
+  }
+
+  function closeCapitalModal() {
+    document.getElementById('capital-modal-overlay').classList.remove('open');
+  }
+
+  function saveCapitalModal() {
+    const val = Number(document.getElementById('inp-capital-modal').value);
+    if (isNaN(val) || val < 0) { toast('Enter a valid amount'); return; }
+    capital = val;
+    saveCapital();
+    updateStats();
+    closeCapitalModal();
+    toast('Capital updated');
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  }
+
+  // ── Today btn ─────────────────────────────────────────────────────
+  function updateTodayBtn() {
+    const t = new Date();
+    const isCurrent = viewYear === t.getFullYear() && viewMonth === t.getMonth();
+    document.getElementById('btn-today').style.display = isCurrent ? 'none' : '';
+  }
+
+  // ── Event wiring ──────────────────────────────────────────────────
+  document.getElementById('prev-month').addEventListener('click', () => {
+    if (--viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCalendar(); updateTodayBtn();
+  });
+
+  document.getElementById('next-month').addEventListener('click', () => {
+    if (++viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar(); updateTodayBtn();
+  });
+
+  document.getElementById('btn-today').addEventListener('click', () => {
+    const t = new Date();
+    viewYear = t.getFullYear(); viewMonth = t.getMonth();
+    renderCalendar(); updateTodayBtn();
+  });
+
+  document.getElementById('chart-prev-year').addEventListener('click', () => {
+    chartYear--; renderChart();
+  });
+
+  document.getElementById('chart-next-year').addEventListener('click', () => {
+    chartYear++; renderChart();
+  });
+
+  document.getElementById('capital-chip').addEventListener('click', openCapitalModal);
+  document.getElementById('btn-capital-cancel').addEventListener('click', closeCapitalModal);
+  document.getElementById('btn-capital-save').addEventListener('click', saveCapitalModal);
+  document.getElementById('inp-capital-modal').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveCapitalModal();
+    if (e.key === 'Escape') closeCapitalModal();
+  });
+
+  document.getElementById('capital-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeCapitalModal();
+  });
+
+  document.getElementById('btn-save').addEventListener('click', exportJSON);
+  document.getElementById('btn-load').addEventListener('click', () => document.getElementById('file-input').click());
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    if (e.target.files[0]) importJSON(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  document.getElementById('btn-cancel').addEventListener('click', closeModal);
+  document.getElementById('btn-save-entry').addEventListener('click', saveEntry);
+  document.getElementById('btn-delete').addEventListener('click', deleteEntry);
+  document.getElementById('inp-pnl').addEventListener('input', updatePnLPreview);
+  document.getElementById('inp-pnl').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEntry();
+    if (e.key === 'Escape') closeModal();
+  });
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeModal(); closeCapitalModal(); }
+  });
+
+  window.addEventListener('resize', renderChart);
+
+  // ── Init ──────────────────────────────────────────────────────────
+  load();
+  renderCalendar();
+  renderChart();
+</script>
+</body>
+</html>
