@@ -590,7 +590,6 @@
       border-radius: var(--radius);
       cursor: pointer;
       transition: border-color .15s, color .15s;
-      align-self: flex-start;
     }
     .btn-signout:hover { border-color: var(--red); color: var(--red); }
   </style>
@@ -622,6 +621,7 @@
       <h1>Perry's Journal</h1>
       <p>Trading Performance Calendar</p>
     </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
     <button id="btn-signout" class="btn-signout" title="Sign out">Sign out</button>
     <div class="header-stats">
       <div class="stat">
@@ -644,6 +644,7 @@
         <div class="stat-label">Month Return</div>
         <div class="stat-value" id="hdr-month-pct">—</div>
       </div>
+    </div>
     </div>
   </header>
 
