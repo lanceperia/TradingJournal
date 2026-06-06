@@ -1081,7 +1081,7 @@
     const wrap  = canvas.parentElement;
     const dpr   = window.devicePixelRatio || 1;
     const W     = wrap.clientWidth;
-    const H     = 180;
+    const H     = wrap.clientHeight;
     canvas.width  = W * dpr;
     canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
