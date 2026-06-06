@@ -923,8 +923,9 @@
 
   const MONTHS     = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December'];
-  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun',
-                        'Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS_SHORT   = ['Jan','Feb','Mar','Apr','May','Jun',
+                          'Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS_INITIAL = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
   // ── Calendar render ───────────────────────────────────────────────
   function renderCalendar() {
@@ -1212,22 +1213,26 @@
       ctx.lineWidth   = 1.5;
       ctx.stroke();
 
-      // value label
-      ctx.fillStyle  = col;
-      ctx.font       = `600 13px 'JetBrains Mono', monospace`;
-      ctx.textAlign  = 'center';
-      const labelY   = v >= 0 ? p.y - 9 : p.y + 17;
-      ctx.fillText(lbl, p.x, labelY);
+      // value label — hidden on mobile
+      if (W > 640) {
+        ctx.fillStyle  = col;
+        ctx.font       = `600 13px 'JetBrains Mono', monospace`;
+        ctx.textAlign  = 'center';
+        const labelY   = v >= 0 ? p.y - 9 : p.y + 17;
+        ctx.fillText(lbl, p.x, labelY);
+      }
     });
 
     drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW);
   }
 
   function drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW) {
-    ctx.fillStyle = 'rgba(82,82,91,.9)';
-    ctx.font      = `400 11px 'JetBrains Mono', monospace`;
-    ctx.textAlign = 'center';
-    MONTHS_SHORT.forEach((m, i) => {
+    const isMobile = W <= 640;
+    const labels   = isMobile ? MONTHS_INITIAL : MONTHS_SHORT;
+    ctx.fillStyle  = 'rgba(82,82,91,.9)';
+    ctx.font       = `400 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign  = 'center';
+    labels.forEach((m, i) => {
       const x = PAD_L + (i / 11) * plotW;
       ctx.fillText(m, x, H - PAD_B + 14);
     });
