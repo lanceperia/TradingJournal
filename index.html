@@ -1213,14 +1213,12 @@
       ctx.lineWidth   = 1.5;
       ctx.stroke();
 
-      // value label — hidden on mobile
-      if (W > 640) {
-        ctx.fillStyle  = col;
-        ctx.font       = `600 13px 'JetBrains Mono', monospace`;
-        ctx.textAlign  = 'center';
-        const labelY   = v >= 0 ? p.y - 9 : p.y + 17;
-        ctx.fillText(lbl, p.x, labelY);
-      }
+      // value label
+      ctx.fillStyle  = col;
+      ctx.font       = `600 13px 'JetBrains Mono', monospace`;
+      ctx.textAlign  = 'center';
+      const labelY   = v >= 0 ? p.y - 9 : p.y + 17;
+      ctx.fillText(lbl, p.x, labelY);
     });
 
     drawXLabels(ctx, W, H, PAD_L, PAD_B, plotW);
