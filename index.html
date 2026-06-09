@@ -667,13 +667,13 @@
   <!-- ── CALENDAR ── -->
   <div class="calendar">
     <div class="cal-header">
-      <div class="cal-dow">Sun</div>
       <div class="cal-dow">Mon</div>
       <div class="cal-dow">Tue</div>
       <div class="cal-dow">Wed</div>
       <div class="cal-dow">Thu</div>
       <div class="cal-dow">Fri</div>
       <div class="cal-dow weekend">Sat</div>
+      <div class="cal-dow weekend">Sun</div>
     </div>
     <div class="cal-body" id="cal-body"></div>
   </div>
@@ -931,7 +931,7 @@
   function renderCalendar() {
     const body        = document.getElementById('cal-body');
     const today       = new Date();
-    const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+    const firstDay    = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // 0=Mon
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
     body.innerHTML = '';
